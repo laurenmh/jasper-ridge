@@ -17,10 +17,19 @@ JRcover <- read_excel("~/Dropbox/California Data/percent cover database/percent 
   mutate(treatment=substr(quadID, 1, 1),
          trtrep=substr(quadID, 2,2),
          subplot=as.numeric(substr(quadID, 3, 4))) %>%
-  select(-c(QuadratCode:PercentCover))
+  select(-c(QuadratCode:PercentCover)) %>%
+  # remove thatch 
+  filter(species != "THSP") %>%
+  # check unique entries for every combination
+  group_by(quadID, species, year, treatment, trtrep, subplot) %>%
+  summarize(cover = sum(cover)) %>%
+  tbl_df() %>%
+  # group all the trifoliums together
+  mutate(species = ifelse(species == "TRTR", "TRSP", species)) %>%
+  group_by(quadID, species, year, treatment, trtrep, subplot) %>%
+  summarize(cover = sum(cover))
 
 # write_csv(JRcover, "JR_cover.csv")
-
 
 ## Gopher data 
 JRgopher1 <- read_csv("~/Dropbox/California Data/Gopher mound data/JR_gopher_1983_2015.csv") %>%
@@ -78,6 +87,6 @@ JRgopher_byplot <- JRgopher %>%
   group_by(quadID) %>%
   summarize(disturb = mean(disturb))
 
-# write_csv(JRgopher, "JR_gopher-disturbance-by-plot.csv")
+#write_csv(JRgopher_byplot, "JR_gopher-disturbance-by-plot.csv")
 
 rm(JRgopher1, JRgopher2, JR_byplot, JR_byyear, JRgopher_byplot)

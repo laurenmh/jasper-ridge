@@ -1,0 +1,38 @@
+---
+title: "Jasper Ridge data description"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Overall Design
+From Hobbs et al. 2007: "In November 1982 we established experimental plots on a north-facing slope on the largest area of serpentine on Jasper Ridge. These consisted of control plots, gopher exclosures, and aboveground herbivore (mainly rabbit) exclosures. Three replicated sets of these treatments were established in a randomized block design. The experimental plots are described fully in Hobbs and Mooney (1991). Each plot was 4 x 4 m, and each set of replicates was separated by 5 m. Within each plot we marked two parallel 1 x 3 m grids, each consisting of 12 contiguous 50 x 50 cm quadrats, giving 24 quadrats per replicate. Each quadrat was subdivided into four 25 x 25 cm subquadrats. Control areas were unfenced, gopher exclosures were fenced with 1-cm mesh fencing buried in the soil to the depth of the bedrock with an aboveground portion of 30–40 cm, and aboveground exclosures were constructed from 1 m high wire mesh (2 cm). The gopher exclosures were only partially successful with all plots being invaded at some time throughout the 20-year study; re-fencing was carried out twice during the 20 years studied. It was concluded that gophers were gaining access to experimental plots not only by breaching fences but also through tunnels in bedrock fissures and that complete exclosures were impossible. Gopher removal from exclosures by trapping was attempted but reinvasion of the plot by more animals was rapid and hence trapping was abandoned. Hence the exclosure treatments are best viewed as reducing the frequency of gopher disturbance rather than completely excluding it."
+
+Hobbs, Richard J., Susan Yates, and Harold A. Mooney. “Long-Term Data Reveal Complex Dynamics in Grassland in Relation to Climate and Disturbance.” Ecological Monographs 77, no. 4 (2007): 545–568.
+
+## Datasets
+
+### 1) JR_cover-by-year
+- `species` is the species code, which appends the first two letters of the genus with the first two letters of the species. See `JR_speciesnames` for the key.  
+- `year` is the year the data were collected (from 1983-2018).
+- `cover` is the percent cover in the quadrat, averaged across all the quadrats. Cover was measured in class increments, with category options of 1, 2, 5, 10, 20 and increments of 10 thereafter. 
+
+
+### 2) JR_cover-by-plot
+- `species` is the species code, which appends the first two letters of the genus with the first two letters of the species. See `JR_speciesnames` for the key.  
+- `quadID` is the unique name of the quadrat measured. This pastes together first  treatment level, where `c` stands for control, `g` for gopher exclosure, and `r` for rabbit exclosure. Next it includes the block number, which ranges from `1` to `3`. Finally, it includes the subplot, which ranges from `01` to `24`.
+- `cover` is the percent cover in the quadrat, averaged across all the years (1983-2018). Cover was measured in class increments, with category options of 1, 2, 5, 10, 20 and increments of 10 thereafter. 
+
+### 3) JR_soil-depth
+- `quadID` is the unique name of the quadrat measured. This pastes together first  treatment level, where `c` stands for control, `g` for gopher exclosure, and `r` for rabbit exclosure. Next it includes the block number, which ranges from `1` to `3`. Finally, it includes the subplot, which ranges from `01` to `24`.
+- `depth` is the depth of the soil to the bedrock, measured in cm. Soil depth was measured once at the beginning of the experiment, with a replicate probe in each of the subquadrats. This is the quadrat-level average of those replicates. 
+
+### 4) JR_gopher-disturbance-by-plot
+- `quadID` is the unique name of the quadrat measured. This pastes together first  treatment level, where `c` stands for control, `g` for gopher exclosure, and `r` for rabbit exclosure. Next it includes the block number, which ranges from `1` to `3`. Finally, it includes the subplot, which ranges from `01` to `24`.
+- `year` is the year the data were collected (from 1983-2018).
+- `disturb` is the disturbance experienced in the quadrat and year. Disturbance was scored from `0` to `4`, denoting the number of subquadrats that were disturbed.
