@@ -61,7 +61,7 @@ JRsoil <- read_csv("~/Dropbox/California Data/percent cover database/JR_soil_raw
          subplot=as.numeric(substr(quadID, 3, 4)))
 
 
-write_csv(JRsoil, "JR_soil-depth.csv")
+#write_csv(JRsoil, "JR_soil-depth.csv")
 
 
 
