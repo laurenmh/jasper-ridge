@@ -44,7 +44,8 @@ gophbigtime <- cbind(do.call("rbind", out)) %>%
          repnum2 = lead(repnum)) %>%
   tbl_df() %>%
   group_by(quadID, repnum2) %>%
-  mutate(ncount = n())
+  mutate(ncount = n()) %>%
+  mutate(yrsdist = max(repnum))
  
 
 tog <- left_join(JRcover, gophbigtime) 
@@ -223,6 +224,169 @@ ggplot(demoout, aes(x=reorder(metric2, facorder), y=value, color = metric2)) +
   scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue")) 
 ggsave("Plantago-Sitanion_tsvr_demodat.pdf", width = 5, height = 5)  
 
-class(res)
+## now for two annuals with different responses
 
-d<-t(as.matrix(JRGdat[,2:dim(JRGdat)[2]]))
+plmi <- tog %>%
+ filter(species == "PLER" | species == "MIDO") %>%
+  mutate(keepdat = ifelse(rowdif == 0 & cover > 3, 1, 0)) %>%
+    group_by(repnum2, species, quadID) %>%
+  mutate(maxkeep = max(keepdat)) %>%
+  filter(maxkeep > 0) %>%
+  tbl_df() %>%
+  filter(ncount > 4) 
+
+
+plmi2 <- plmi %>%
+  group_by(rowdif, quadID, species, treatment) %>%
+  summarize(meancover = mean(cover)) %>%
+  tbl_df() %>%
+  group_by(rowdif, species) %>%
+  summarize(cover = mean(meancover), secover = calcSE(meancover)) 
+
+ggplot(plmi2, aes(x=rowdif, y=cover, color = species)) + geom_line()
+
+
+demo <- subset(plmi2, rowdif < 9) %>%
+  select(rowdif, species, cover) %>%
+  spread(species, cover)
+
+d <- t(as.matrix(demo[,2:dim(demo)[2]]))
+
+
+res0 <- vreq_classic(d)
+classicVR <- res0[[3]]
+
+res <-tsvreq_classic(d)
+
+aggresLong<-aggts(res,res$ts[res$ts>=4])
+aggresShort<-aggts(res,res$ts[res$ts<4])
+
+longVR <- aggresLong[[3]]
+shortVR <- aggresShort[[3]]
+
+demoout <- data.frame(rbind(classicVR, longVR, shortVR))
+names(demoout) = "value"
+demoout$metric <- row.names(demoout)
+demoout$metric2 <- c("Classic", "Long 
+Time-Scale", "Short 
+Time-Scale")
+demoout$facorder <- c(3,2,1)
+
+
+ggplot(demoout, aes(x=reorder(metric2, facorder), y=value, color = metric2)) + 
+  geom_point(size = 3) + ylim(0, 2) +
+  theme_bw() + 
+  theme(legend.position = "none", text = element_text(size = 14)) + labs(y="Variance Ratio", x = "") + 
+  geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
+  scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue")) 
+
+
+## now by treatment
+
+plstall <- JRcover %>%
+  filter(species == "MIDO" | species == "PLER",
+         treatment != "r")
+
+plstall2 <- plstall %>%
+  group_by(quadID, species) %>%
+  mutate(totalcover = sum(cover)) %>%
+  tbl_df() %>%
+  group_by(quadID) %>%
+  mutate(mincover = min(totalcover)) %>%
+  filter(mincover > 0)
+
+
+outnames<-c("quadID", "treatment", "classicVR", "longVR", "shortVR")
+siteout<-as.data.frame(matrix(nrow=0, ncol=5))
+names(siteout)<-outnames
+quads <- unique(plstall2$quadID)
+
+for (i in 1:length(quads)){
+  
+  subber <- subset(plstall2, quadID == quads[i]) %>%
+    tbl_df()
+  
+  subber2 <- subber %>%
+    select(year, species, cover) %>%
+    spread(species, cover, fill = 0)
+  
+  d <- t(as.matrix(subber2[,2:dim(subber2)[2]]))
+  
+  subdat <-subber %>%
+    select(quadID, treatment) %>%
+    unique()
+  
+  res0 <- vreq_classic(d)
+  subdat$classicVR <- res0[[3]]
+  
+  res <-tsvreq_classic(d)
+  
+  aggresLong<-aggts(res,res$ts[res$ts>=4])
+  aggresShort<-aggts(res,res$ts[res$ts<4])
+  
+  subdat$longVR <- aggresLong[[3]]
+  subdat$shortVR <- aggresShort[[3]]
+  
+  siteout<-rbind(siteout, subdat)
+  
+}
+
+
+
+siteout2 <- siteout %>%
+  gather(metric, value, classicVR:shortVR) %>%
+  group_by(treatment, metric) %>%
+  summarize(meanval = mean(value), seval = sd(value)/sqrt(n()))
+
+siteout2$metric2 <- c("Classic", "Long 
+                      Time-Scale", "Short 
+                      Time-Scale", "Classic", "Long 
+                      Time-Scale", "Short 
+                      Time-Scale")
+siteout2$facorder <- c(3,2,1, 3, 2,1)
+siteout2$treatment2 <- c(rep("Control", 3), rep("Gopher Excluded", 3))
+
+
+#ggplot(siteout2, aes(x=metric, y = value, color = metric)) + geom_boxplot() + facet_wrap(~treatment)
+ggplot(siteout2, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
+  geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
+  geom_point(size = 3) + 
+  facet_wrap(~treatment2) +
+  geom_errorbar(aes(ymin = meanval - seval, ymax = meanval + seval), width = .2) + 
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 14)) + 
+  scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue"))  + 
+  labs(x = "", y="Variance Ratio")
+
+ggsave("Plantago-Microseris_tsvr_alldat.pdf", width = 8, height = 5)  
+
+
+quadinfo <- tog %>%
+  tbl_df() %>%
+  select(quadID, yrsdist, treatment) %>%
+  unique()
+
+siteout3 <- left_join(siteout, quadinfo) %>%
+  gather(metric, value, classicVR:shortVR) %>%
+  mutate(freqdist = ifelse(yrsdist > 5, 1, 0))  %>%
+  group_by(freqdist, metric) %>%
+  summarize(meanval = mean(value), seval = sd(value)/sqrt(n()))
+
+
+siteout3$metric2 <- c("Classic", "Long 
+                      Time-Scale", "Short 
+                      Time-Scale", "Classic", "Long 
+                      Time-Scale", "Short 
+                      Time-Scale")
+siteout3$facorder <- c(3,2,1, 3, 2,1)
+
+ggplot(siteout3, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
+  geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
+  geom_point(size = 3) + 
+  facet_wrap(~freqdist) +
+  geom_errorbar(aes(ymin = meanval - seval, ymax = meanval + seval), width = .2) + 
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 14)) + 
+  scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue"))  + 
+  labs(x = "", y="Variance Ratio")
+
+
+ggplot(quadinfo, aes(x=yrsdist)) + geom_histogram() + facet_wrap(~treatment)
