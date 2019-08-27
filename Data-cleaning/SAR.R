@@ -64,11 +64,62 @@ JRsoil2 <- JRsoil %>%
   summarize(depth = mean(depth)) %>%
   mutate(trtrep = paste(treatment, trtrep, sep = ""))
 
+JRrain <- read_csv("~/Dropbox/California Data/jrg_prism.csv") %>%
+  select(-X1)
+  
+  
   
 output2 <- left_join(output, JRgopher2)
 ggplot(output2, aes(x=disturb, y=slope)) + geom_point() + geom_smooth(se=F, method = 'lm')
 ggplot(output2, aes(x=disturb, y=intercept)) + geom_point() + geom_smooth(se=F, method = 'lm')
 
+l <- lm(intercept~disturb, data = output4)
+summary(l)
+
+l <- lm(slope~disturb, data = output4)
+summary(l)
+
+
 output3 <- left_join(output2, JRsoil2)
 ggplot(output3, aes(x=depth, y=slope)) + geom_point() + geom_smooth(se=F, method = 'lm')
-ggplot(output3, aes(x=depth, y=intercept)) + geom_point(aes(color = treatment)) + geom_smooth(se=F, method = 'lm')
+ggplot(output3, aes(x=depth, y=exp(intercept))) + geom_point(aes(color = treatment)) + geom_smooth(se=F, method = 'lm')
+
+output4 <- left_join(output3, JRrain)
+ggplot(output4, aes(x=ppt, y=slope)) + geom_point() + geom_smooth(se=F, method = 'lm')
+ggplot(output4, aes(x=ppt, y=intercept)) + geom_point(aes(color = treatment)) + geom_smooth(se=F, method = 'lm')
+
+l <- lm(intercept~ppt, data = output4)
+summary(l)
+
+l <- lm(slope~ppt, data = output4)
+summary(l)
+
+
+l <- lm(intercept~depth, data = output4)
+summary(l)
+
+l <- lm(slope~depth, data = output4)
+summary(l)
+
+l <- lm(intercept ~ depth + disturb + ppt, data = output4 )
+summary(l)
+
+l <- lm(slope ~ depth + disturb + ppt, data = output4 )
+summary(l)
+
+
+### rare species in aggregate
+JRcoverbyrare <- JRcover %>%
+  group_by(species) %>%
+  mutate(totalmean = mean(cover)) %>%
+  mutate(cat = ifelse(totalmean > 3, "dominant", "rare")) %>%
+  group_by(quadID, year, treatment, trtrep, subplot, trtrepyear, cat) %>%
+  summarize(cover = sum(cover)) %>%
+  group_by(year, treatment, trtrep, cat) %>%
+  summarize(meancover = mean(cover))
+
+ggplot(JRcoverbyrare, aes(x=year, y=meancover, color = cat, group = interaction(cat, treatment, trtrep))) + geom_point()+ geom_line()  +facet_wrap(trtrep~treatment)
+
+JRcoverbyrare_rain <- left_join(JRcoverbyrare, JRrain)
+ggplot(JRcoverbyrare_rain, aes(x=ppt, y=meancover, color = cat)) + geom_point()  +
+  facet_grid(cat~treatment, scale = "free") + geom_smooth(method = "lm")

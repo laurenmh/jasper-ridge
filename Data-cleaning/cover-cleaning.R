@@ -9,7 +9,7 @@ library(readxl)
 # Cover data by quadrat ---------------------------------------------------
 
 ## Cover data 
-JRcover <- read_excel("~/Dropbox/California Data/percent cover database/percent cover vegetation Data 1983-2018.xlsx") %>%
+JRcover <- read_excel("~/Dropbox/California Data/percent cover database/percent cover vegetation Data 1983-2019.xlsx") %>%
   mutate(quadID = tolower(QuadratCode),
          species = SpeciesCode,
          year = SamplingYear,
@@ -35,7 +35,7 @@ JRcover <- read_excel("~/Dropbox/California Data/percent cover database/percent 
 JRgopher1 <- read_csv("~/Dropbox/California Data/Gopher mound data/JR_gopher_1983_2015.csv") %>%
   select(-X1, -freq)
 
-JRgopher2 <- read_excel("~/Dropbox/California Data/Gopher mound data/Gopher data 05-18.xlsx", sheet = 2) %>%
+JRgopher2 <- read_excel("~/Dropbox/California Data/Gopher mound data/Gopher data 05-19.xlsx", sheet = 2) %>%
   mutate(quadID = tolower(QuadratCode),
          disturb = Numbersubquadratsdisturbed,
          year = SamplingYear) %>%
