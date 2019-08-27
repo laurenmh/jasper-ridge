@@ -292,8 +292,8 @@ JR_mean_time_focal2 <- JR_mean_time %>%
 ggplot(JR_mean_time_focal, aes(x=precip, y=meancover)) + facet_wrap(~species, scales = "free") + 
   geom_point() + geom_smooth(se = F)
 
-ggplot(JR_mean_time_focal, aes(x=year, y=meancover, shape = treatment, lty = treatment)) + geom_line() + 
-  geom_point() + facet_wrap(~Genus, scale = "free")
+ggplot(JR_mean_time_focal, aes(x=year, y=meancover)) + geom_line(aes(shape = treatment, lty = treatment)) + 
+  geom_point(aes(shape = treatment, lty = treatment)) + facet_wrap(~Genus, scale = "free") + geom_smooth(se=F, method = "lm")
 
 ggplot(JR_mean_time_focal2, aes(x=precip, y=meancover, color)) + facet_grid(Genus~dummy, scales = "free") + 
   geom_point() + 
@@ -1148,3 +1148,34 @@ d <- ggplot(subset(JR_mean_time, species == "BRHO"),
   geom_errorbar(aes(ymin=meancover -secover, ymax= meancover + secover, color = as.factor(treatment))) + theme_bw()
 
 grid.arrange(a,b,c,d, ncol=1)
+
+
+JR_mean_time_focal <- JR_mean_time %>%
+  filter(species%in%c("CAMU", "HELU", "LACA", "BRMO", "LOMU", "EVSP", "PLER", "BRSP", 
+                      "VUMY", "LOSU", "SIJU", "STPU", "LAPL", "ORDE", "VUMI",
+                      "CHPO", "BR__", "TIER", "MIDO", "ASGA"))  %>%
+  tbl_df() %>%
+  mutate(Genus = ifelse(Genus == "Orthocarpus", "Castilleja", Genus),
+         Genus = ifelse(Genus == "Sitanion", "Elymus", Genus),
+         Genus = ifelse(Genus == "Tillaea", "Crassula", Genus),
+         Genus = ifelse(Genus == "Lotus", "Acmispon", Genus)) %>%
+  mutate(Genus = fct_relevel(Genus, c("Plantago", "Lasthenia", "Microseris", 
+                                      "Vulpia", "Bromus",  "Lolium", "Elymus", "Stipa",
+                                      "Calycadenia","Hemizonia",  "Acmispon", "Castilleja",  "Layia",
+                                      "Chlorogalum", "Brodiaea", "Evax", "Crassula", "Astragalus"))) %>%
+  tbl_df() %>%
+  mutate(dummy = "")
+
+JR_mean_time_focal2 <- JR_mean_time %>%
+  filter(species%in%c("CAMU", "HELU", "LACA", "BRMO", "LOMU", "EVSP", "PLER", "BRSP", 
+                      "VUMY", "LOSU", "SIJU", "STPU", "LAPL", "ORDE", "VUMI",
+                      "CHPO", "BR__", "TIER", "MIDO", "ASGA")) %>%
+  group_by(Genus, Species, LifeForm, year, species, precip) %>%
+  summarize(meancover = mean(meancover)) %>%
+  tbl_df() %>%
+  mutate(Genus = fct_relevel(Genus, c("Plantago", "Lasthenia", "Microseris", 
+                                      "Vulpia", "Bromus", "Lolium", "Sitanion", "Stipa",
+                                      "Calycadenia", "Hemizonia",  "Lotus", "Orthocarpus",  "Layia",
+                                      "Chlorogalum", "Brodiaea", "Evax", "Tillaea", "Astragalus"))) %>%
+  tbl_df() %>%
+  mutate(dummy = "")
