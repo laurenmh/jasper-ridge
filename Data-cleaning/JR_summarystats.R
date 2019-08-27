@@ -335,9 +335,9 @@ theme_update( panel.grid.major=element_blank(), panel.grid.minor=element_blank()
               axis.text = element_text(size = 14))
 
 a <- ggplot(JR_mean_time_focal, aes(x=year, y=meancover, lty = treatment, shape = treatment, color = treatment)) + geom_line() + 
-  geom_point() + facet_grid(Genus~dummy, scale = "free", switch = "y") + theme(legend.position = "none") + 
+  geom_point() + facet_grid(Genus~dummy, scale = "free", switch = "y") +
   labs(x="Year", y = expression(paste("Percent cover (m"^"2",")"))) + theme(strip.placement = "outside", strip.text = element_text(face = "italic")) +
-  scale_color_manual(values = c("grey15", "grey40", "grey65"))
+  scale_color_manual(values = c("grey45",  "grey65",  "grey10")) + theme(legend.position = "none") 
 
 
 b <- ggplot(JR_mean_focal, aes(x=soilDepth, y=meancover)) + facet_grid(Genus~dummy, scales = "free") + 
@@ -414,7 +414,7 @@ d <- ggplot(JR_mean_time_focal2, aes(x=precip, y=meancover, color)) + facet_grid
 #             method = lm, se = FALSE) + theme(strip.background = element_blank(), strip.text = element_blank()) + 
 
 
-pdf("mastergraph.pdf", width = 15, height = 22)
+pdf("mastergraph.pdf", width = 16, height = 24)
 plot_grid(a,b,c,d, nrow = 1, axis = "tb", align = "hv")
 dev.off()
 
