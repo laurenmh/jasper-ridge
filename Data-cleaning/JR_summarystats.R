@@ -339,6 +339,8 @@ a <- ggplot(JR_mean_time_focal, aes(x=year, y=meancover, lty = treatment, shape 
   labs(x="Year", y = expression(paste("Percent cover (m"^"2",")"))) + theme(strip.placement = "outside", strip.text = element_text(face = "italic")) +
   scale_color_manual(values = c("grey45",  "grey65",  "grey10")) + theme(legend.position = "none") 
 
+l <- lm(meancover ~ year, data = subset(JR_mean_time_focal, species == "VUMI"))
+summary(l)
 
 b <- ggplot(JR_mean_focal, aes(x=soilDepth, y=meancover)) + facet_grid(Genus~dummy, scales = "free") + 
   #  geom_smooth(data = subset(JR_mean_focal, species == "BRMO"), aes(soilDepth, meancover),
@@ -414,9 +416,9 @@ d <- ggplot(JR_mean_time_focal2, aes(x=precip, y=meancover, color)) + facet_grid
 #             method = lm, se = FALSE) + theme(strip.background = element_blank(), strip.text = element_blank()) + 
 
 
-pdf("mastergraph.pdf", width = 16, height = 24)
+#pdf("mastergraph.pdf", width = 16, height = 24)
 plot_grid(a,b,c,d, nrow = 1, axis = "tb", align = "hv")
-dev.off()
+#dev.off()
 
 
 
