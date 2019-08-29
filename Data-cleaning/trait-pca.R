@@ -51,7 +51,7 @@ tog <- left_join(trait.dat, siteout) %>%
 
 
 
-pdf("TraitPCA-justforbs.pdf", width = 9, height = 7.5)
+#pdf("TraitPCA-justforbs.pdf", width = 9, height = 7.5)
 #pdf("TraitPCA_noLegumes.pdf", width = 9, height = 7.5)
 
 ggplot(tog, aes(x=PC1, y=PC2))+ 
@@ -74,5 +74,5 @@ ggplot(tog, aes(x=PC1, y=PC2))+
   xlab(paste("Axis 1 (",sprintf("%.1f",myrda$CA$eig["PC1"]/myrda$tot.chi*100,3),"%)",sep="")) +
   ylab(paste("Axis 2 (",sprintf("%.1f",myrda$CA$eig["PC2"]/myrda$tot.chi*100,3),"%)",sep=""))  + theme(legend.position = "none")
 
-dev.off()
+#dev.off()
 
