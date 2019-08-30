@@ -47,7 +47,98 @@ JR_gopher_mean <- left_join(JR_gopher, JR_soil) %>%
 JR_tog0 <- left_join(JR_aggcover, JR_soil)
 JR_tog1 <- left_join(JR_tog0, JR_rain)
 JR_tog2 <- left_join(JR_tog1, JR_spp)
-JR_tog <- left_join(JR_tog2, JR_gopher)
+JR_tog3 <- left_join(JR_tog2, JR_gopher) 
+JR_tog <- left_join(JR_tog3, JR_tog_prev)
+
+JR_togmean <- left_join(JR_tog, JR_mean)
+
+l <- lme(cover ~ treatment + soilDepth + disturb + ppt + prevprecip, random = ~1|trtrep/plot/uniqueID/year, 
+         data = subset(JR_tog, species == "PLER"), na.action = na.omit)
+summary(l)
+
+library(lme4)
+library(lmerTest)
+
+l <- lmer(cover ~ treatment + soilDepth + disturb + ppt + prevprecip + (1|trtrep/uniqueID) + (1|year), 
+          data = subset(JR_tog, species == "PLER"), na.action = na.omit)
+
+l <- lmer(cover ~ soilDepth + disturb + ppt + (1|trtrep/uniqueID) + (1|year), 
+          data = subset(JR_tog, species == "PLER"), na.action = na.omit)
+
+summary(l)
+
+dat <- JR_togmean %>%
+  filter(species == "STPU") %>%
+  filter(!is.na(cover), !is.na(precip), !is.na(prevprecip))
+
+l <- lmer(cover ~  disturb + soilDepth+ precip + prevprecip  + meandisturb + 
+            (1|trtrep/uniqueID) + 
+            (1|year), 
+          data = dat, na.action = na.omit)
+
+summary(l)
+step_res <- step(l)
+final <- get_model(step_res)
+summary(final)
+
+anova(final)
+
+summary(l)
+
+
+
+a <-ggplot(JR_gopher_mean_time, aes(x=year, y=meandisturb/4*100)) +
+  geom_point(aes(color = treatment, shape = treatment, 
+                 group = treatment), size = 4) + geom_line(aes(color = treatment, 
+                                                               group = treatment),
+                                                           lwd = 1.1) + 
+#  geom_errorbar(aes(ymin = meandisturb/4*100 - sedisturb/4*100,
+#                    ymax = meandisturb/4*100 + sedisturb/4*100)) + 
+  scale_color_manual(values = c("grey45",  "grey65",  "grey10")) + 
+  theme(legend.position = "none") + labs(x="Year", y = "Percent disturbance") + 
+  geom_smooth()
+
+b <- ggplot(JR_rain, aes(x=year, y=precip)) + geom_line() + geom_smooth()
+
+plot_grid(a,b, ncol = 1)
+
+ggplot(JR_gopher_mean, aes(x=soilDepth, y=meandisturb/4*100)) +
+  geom_smooth(se=F, method = "lm", color = "grey") + geom_point() +
+  labs(x = "Soil depth (cm)", y = "Percent disturbance")
+
+
+gophrain <- left_join(JR_gopher_mean_time, JR_tog_prev %>% select(year, prevprecip) %>%unique())
+
+
+ggplot(gophrain, aes(x = precip, meandisturb, color = treatment)) + geom_point() +
+  labs(x = "Rainfall (mm)", y = "Percent disturbance") + 
+  geom_smooth(se = F, method = lm) + facet_wrap(~treatment)
+
+ggplot(gophrain, aes(x = prevprecip, meandisturb, color = treatment)) + geom_point() +
+  labs(x = "Rainfall (mm)", y = "Percent disturbance") + 
+  geom_smooth(se = F, method = lm) + facet_wrap(~treatment)
+
+l <- lm(meandisturb~ precip + prevprecip + treatment, data = gophrain)
+summary(l)
+lm1 <- lm(meandisturb~ precip + treatment + prevprecip, data = gophrain)
+summary(lm1)
+slm1 <- step(lm1)
+summary(slm1)
+
+JR_gopher2 <- left_join(JR_gopher, JR_rain)
+JR_gopher3 <- left_join(JR_gopher2, JR_tog_prev %>% select(year, prevprecip))
+JR_gopher4 <- left_join(JR_gopher3, JR_soil)
+
+l <- lmer(disturb ~  soilDepth+ precip + prevprecip  +
+            (1|trtrep/uniqueID) + 
+            (1|year), 
+          data = dat, na.action = na.omit)
+
+summary(l)
+step_res <- step(l)
+final <- get_model(step_res)
+summary(final)
+
 
 
 JR_mean0 <- JR_tog %>%
@@ -77,6 +168,10 @@ JR_gopher_mean_time <- left_join(JR_gopher, JR_rain) %>%
 
 
 JR_mean_time <- left_join(JR_mean_time_0, JR_gopher_mean_time)
+
+ggplot(JR_mean_time, aes(x=meandisturb, y = meancover, color = treatment)) + geom_point() + facet_wrap(~species, scale = "free")
+
+
 
 JR_x1 <- left_join(JR_tog, JR_tog_prev) %>%
   filter(species == "LOSU" | species == "ASGA" | species == "TRSP" | species == "BRHO") 
@@ -188,11 +283,6 @@ ggplot(JR_mean_focal, aes(x=treatment, y=meancover)) + facet_wrap(~Genus, scales
 
 
 
-JR_gopher_mean
-ggplot(JR_gopher_mean, aes(x=soilDepth, y=meandisturb)) + geom_point() + geom_smooth(se=F, method = "lm")
-
-ggplot(JR_mean_focal, aes(x=soilDepth, y=meancover)) + facet_wrap(~species, scales = "free") + 
-  geom_point() 
 
 a <- ggplot(JR_mean_time_focal, aes(x=year, y=meancover, shape = treatment, lty = treatment)) + geom_line() + 
   geom_point() + facet_grid(Genus~dummy, scale = "free", switch = "y") + theme(legend.position = "none") + 

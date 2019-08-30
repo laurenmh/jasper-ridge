@@ -172,12 +172,121 @@ C <- ggplot(tog, aes(x=PC1, y=PC2))+
   ylab(paste("Axis 2 (",sprintf("%.1f",myrda$CA$eig["PC2"]/myrda$tot.chi*100,3),"%)",sep="")) +
   scale_color_manual(values = cbPalette) + theme(legend.position = "none")
 
-pdf("trait-pca-patterns-code.pdf", width = 10, height = 5)
+#pdf("trait-pca-patterns-code.pdf", width = 10, height = 5)
 plot_grid(C + annotate("text", x = -1.7, y = 1.6, label = "(A)", size = 5),
           plot_grid(A + labs(x="") + theme(axis.text.x = element_blank()) +
                       annotate("text", x= 1984, y=.35, label = "(B)", size = 5), 
                     B + annotate("text", x= 1984, y=.3, label = "(C)", size = 5), ncol = 1))
-dev.off()
+#dev.off()
+siteout
+
+JR_allcover2 <- JRm2cover %>%
+  tbl_df() %>%
+  mutate(species = as.character(species),
+         species = ifelse(species == "TRAL" | species == "TRTR", "TRSP", species),
+         species = tolower(species)) %>%
+  filter(species%in%c(tog2)) %>%
+  group_by(year, species, treatment, trtrep, plot, uniqueID) %>%
+  summarize(cover = sum(cover)) %>%
+  tbl_df() %>%
+  filter(species != "BARE", species != "ROCK") %>%
+  mutate(code = tolower(species))
+
+covtogPC2 <- right_join(JR_allcover2, siteout) %>%
+  mutate(PC1cat = ifelse(PC1 > 0, "high", "low"),
+         PC2cat = ifelse(PC2 > 0, "high", "low")) %>%
+  group_by(year, PC2cat, treatment, trtrep, plot, uniqueID) %>%
+  summarize(cover = sum(cover)) %>%
+  group_by(year, PC2cat) %>%
+  summarize(meancover = mean(cover))
+
+
+covtogPC1 <- right_join(JR_allcover2, siteout) %>%
+  mutate(PC1cat = ifelse(PC1 > 0, "high", "low"),
+         PC2cat = ifelse(PC2 > 0, "high", "low")) %>%
+  group_by(year, PC1cat, treatment, trtrep, plot, uniqueID) %>%
+  summarize(cover = sum(cover)) %>%
+  group_by(year, PC1cat) %>%
+  summarize(meancover = mean(cover))
+
+
+library(codyn)
+ggplot(covtogPC2, aes(x=year, y=meancover, color = PC2cat)) + geom_line()
+
+variance_ratio(subset(covtogPC2, year < 2007), "year", "PC2cat", "meancover", 500)
+variance_ratio(subset(covtogPC2, year >= 2007), "year", "PC2cat", "meancover", 500)
+
+
+variance_ratio(subset(covtogPC1, year < 2007), "year", "PC1cat", "meancover", 500)
+variance_ratio(subset(covtogPC1, year >= 2007), "year", "PC1cat", "meancover", 500)
+
+
+variance_ratio(subset(JR_allcover2), "year", "code", "cover", 10, "uniqueID")
+
+covtogPC1all <- right_join(JR_allcover2, siteout) %>%
+  mutate(PC1cat = ifelse(PC1 > 0, "high", "low"),
+         PC2cat = ifelse(PC2 > 0, "high", "low")) %>%
+  group_by(year, PC1cat, treatment, trtrep, plot, uniqueID) %>%
+  summarize(cover = sum(cover))
+
+variance_ratio(covtogPC1all, "year", "PC1cat", "cover", 10, "uniqueID")
+variance_ratio(subset(covtogPC1all, year <= 2002), "year", "PC1cat", "cover", 10, "uniqueID")
+variance_ratio(subset(covtogPC1all, year > 2002), "year", "PC1cat", "cover", 10, "uniqueID")
+
+
+covtogPC2all <- right_join(JR_allcover2, siteout) %>%
+  mutate(PC1cat = ifelse(PC1 > 0, "high", "low"),
+         PC2cat = ifelse(PC2 > 0, "high", "low")) %>%
+  group_by(year, PC2cat, treatment, trtrep, plot, uniqueID) %>%
+  summarize(cover = sum(cover))
+
+
+variance_ratio(covtogPC2all, "year", "PC2cat", "cover", 10, "uniqueID")
+variance_ratio(subset(covtogPC2all, year <= 2002), "year", "PC2cat", "cover", 10, "uniqueID")
+variance_ratio(subset(covtogPC2all, year > 2002), "year", "PC2cat", "cover", 10, "uniqueID")
+
+ggplot(covtogPC2all, aes(x=year, y=cover, color = PC2cat)) + geom_point() + facet_wrap(~PC2cat)
+
+
+JR_rain <- read_csv("~/Dropbox/California Data/jrg_prism.csv") %>%
+  select(-X1) %>%
+  mutate(precip = ppt)
+
+covPC1rain <- left_join(covtogPC1all, JR_rain) %>%
+  mutate(plotrep = paste(treatment, trtrep, sep ="_"))
+
+ggplot(covPC1rain, aes(x=growing_season_ppt, y=cover)) + geom_point() + facet_wrap(~PC1cat) + 
+  geom_smooth(method = "lm")
+
+covPC2rain <- left_join(covtogPC2all, JR_rain) %>%
+  mutate(plotrep = paste(treatment, trtrep, sep ="_"))
+
+ggplot(covPC2rain, aes(x=growing_season_ppt, y=cover)) + geom_point() + facet_wrap(~PC2cat) + 
+  geom_smooth(method = "lm")
+
+
+covPC1rain <- left_join(covtogPC1all, JR_rain)
+
+ggplot(covPC1rain, aes(x=precip, y=cover)) + geom_point() + facet_wrap(~PC1cat) + 
+  geom_smooth(method = "lm")
+
+
+ggplot(covPC2rain, aes(x=growing_season_ppt, y=cover, color = treatment)) + geom_point() + facet_wrap(~PC2cat) + 
+  geom_smooth(method = "lm") 
+
+library(nlme)
+
+
+a<-lme(cover ~ growing_season_ppt*treatment, random=~1|plotrep/uniqueID, 
+       data = subset(covPC2rain, PC2cat == "high"), na.action = na.omit)
+summary(a)
+
+
+
+a<-lme(cover ~ growing_season_ppt + treatment, random=~1|plotrep/uniqueID, 
+       data = subset(covPC1rain, PC1cat == "high"), na.action = na.omit)
+summary(a)
+
 
 # 
 # 
