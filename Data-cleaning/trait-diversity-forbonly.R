@@ -2,15 +2,6 @@ library(tidyverse)
 library(readr)
 library(vegan)
 library(FD)
-library(cowplot)
-
-## Set ggplot2 theme
-theme_set(theme_bw())
-theme_update( panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-              strip.background = element_blank(),
-              text = element_text(size = 16),
-              strip.text= element_text(size = 17), 
-              axis.text = element_text(size = 14))
 
 source("Data-cleaning/cover-1m2-cleaning.R")
 
@@ -46,8 +37,7 @@ trait.dat2 <- trait.dat %>%
                        "Microseris douglasii", "Castilleja densiflora",
                        "Hemizonia congesta",
                        "Lotus wrangelianus" ,  "Trifolium albopurpureum" , "Plantago erecta",
-                       "Astragalus gambelianus", "Lasthenia californica", "Hesperevax sparsiflora" ,
-                       "Crassula connata", "Elymus multisedus", "Nassella pulchra", "Lolium multiflorum", "Bromus hordaceous", "Chlorogalum pomeridianum var. pomeridianum","Dichelostemma capitatum", "Triteleia laxa",  "Vulpia microstachys var pauciflora")) %>%
+                       "Astragalus gambelianus", "Lasthenia californica", "Hesperevax sparsiflora")) %>%
   filter(species != "Crassula connata") %>% 
   mutate(RS = ifelse(species == "Triteleia laxa", 3.68009626, RS)) %>%
   mutate(SRL = ifelse(species == "Dichelostemma capitatum", 0.02259358, RS)) %>%
@@ -81,7 +71,7 @@ row.names(abundance) <- JR_allcover$plotyr
 traitdat <- trait.dat2 %>%
   filter(code%in%c(tog2))
 
-traits <- as.matrix(traitdat[1:17, c(3:ncol(traitdat))])
+traits <- as.matrix(traitdat[1:10, c(3:ncol(traitdat))])
 row.names(traits) <- traitdat$code
 
 sort(colnames(abundance))
@@ -124,37 +114,27 @@ PCresults <- PCresults %>%
   separate(plotyr, c("treatment", "rep", "block", "position", "year")) 
 
 PCresultagg <- PCresults %>%
-  group_by(year, treatment) %>%
+  group_by(year) %>%
   summarize_all(funs(mean)) %>%
-  tbl_df() %>%
   mutate(year = as.numeric(year))
 
-A <- ggplot(PCresultagg, aes(x=year, y=CWM.PC1, color = treatment)) + geom_line() +
-  labs(x = "Year", y = "CWM of PC1")
+ggplot(PCresultagg, aes(x=year, y=CWM.PC1)) + geom_line() + geom_smooth(se=F, method = "lm")
+ggplot(PCresultagg, aes(x=year, y=CWM.PC2)) + geom_line() + geom_smooth(se=F, method = "lm")
 
-B <- ggplot(PCresultagg, aes(x=year, y=CWM.PC2, color = treatment)) + geom_line()  +
-  labs(x = "Year", y = "CWM of PC2")
 
-plot_grid(A + labs(x="") + theme(axis.text.x = element_blank()), B, ncol = 1)
 
 tog <- right_join(trait.dat, siteout) %>%
-  mutate(func = paste(status, habit, longevity, sep = "_")) %>%
-  mutate(func = tolower(func)) %>%
-  mutate(species = ifelse(species == "Vulpia microstachys var pauciflora", "Vulpia microstachys", species),
-         species = ifelse(species == "Dichelostemma capitatum", "Brodiaea sp.", species),
-         species = ifelse(species == "Nassella pulchra", "Stipa pulchra", species),
-         species = ifelse(species == "Chlorogalum pomeridianum var. pomeridianum",
-                          "Chlorogalum pomeridianum", species))
+  mutate(func = paste(status, habit, sep = "_")) %>%
+  mutate(func = tolower(func))
 
 
 #pdf("TraitPCA-justforbs.pdf", width = 9, height = 7.5)
 #pdf("TraitPCA_noLegumes.pdf", width = 9, height = 7.5)
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#0072B2", "#D55E00", "#CC79A7")
 
-C <- ggplot(tog, aes(x=PC1, y=PC2))+ 
+ggplot(tog, aes(x=PC1, y=PC2))+ 
   geom_hline(aes(yintercept=0), color="grey") + 
   geom_vline(aes(xintercept=0), color="grey") +
-  geom_text(aes(label = code, color = func), size = 4) +
+  geom_text(aes(label = name, color = func), size = 4) +
   # scale_color_manual(values = c("grey20", "grey70")) +
   geom_segment(data = enviroout,
                aes(x = 0, xend =  PC1,
@@ -167,18 +147,9 @@ C <- ggplot(tog, aes(x=PC1, y=PC2))+
             hjust = 0.5, 
             color="black") + 
   theme_bw() +theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(),
-                    text=element_text(size = 16))+ 
+                    text=element_text(size = 20))+ 
   xlab(paste("Axis 1 (",sprintf("%.1f",myrda$CA$eig["PC1"]/myrda$tot.chi*100,3),"%)",sep="")) +
-  ylab(paste("Axis 2 (",sprintf("%.1f",myrda$CA$eig["PC2"]/myrda$tot.chi*100,3),"%)",sep="")) +
-  scale_color_manual(values = cbPalette) + theme(legend.position = "none")
-
-pdf("trait-pca-patterns-code.pdf", width = 10, height = 5)
-plot_grid(C + annotate("text", x = -1.7, y = 1.6, label = "(A)", size = 5),
-          plot_grid(A + labs(x="") + theme(axis.text.x = element_blank()) +
-                      annotate("text", x= 1984, y=.35, label = "(B)", size = 5), 
-                    B + annotate("text", x= 1984, y=.3, label = "(C)", size = 5), ncol = 1))
-dev.off()
-
+  ylab(paste("Axis 2 (",sprintf("%.1f",myrda$CA$eig["PC2"]/myrda$tot.chi*100,3),"%)",sep="")) 
 # 
 # 
 # 
