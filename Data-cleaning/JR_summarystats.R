@@ -2,6 +2,10 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(corrplot)
+library(lme4)
+library(lmerTest)
+library(nlme)
+library(broom)
 
 ## Set ggplot2 theme
 theme_set(theme_bw())
@@ -31,9 +35,10 @@ JR_soil <- JRm2soil
 
 JR_gopher <- JRm2gopher
 
-JR_rain <- read_csv("~/Dropbox/California Data/jrg_prism.csv") %>%
-  select(-X1) %>%
-  mutate(precip = ppt)
+source("prism-cleaning.R")
+# JR_rain <- read_csv("~/Dropbox/California Data/jrg_prism.csv") %>%
+#   select(-X1) %>%
+#   mutate(precip = ppt)
 
 
 JR_spp <- read_csv("~/Dropbox/California Data/JR_species names.csv") %>%
@@ -46,9 +51,23 @@ JR_gopher_mean <- left_join(JR_gopher, JR_soil) %>%
 
 JR_tog0 <- left_join(JR_aggcover, JR_soil)
 JR_tog1 <- left_join(JR_tog0, JR_rain)
+
+JR_tog_prev <- JR_tog1 %>%
+  select(year, species, uniqueID, cover, precip) %>%
+  mutate(year = year + 1) %>%
+  mutate(prevcover = cover, prevprecip = precip) %>%
+  select(-cover, - precip)
+
 JR_tog2 <- left_join(JR_tog1, JR_spp)
 JR_tog3 <- left_join(JR_tog2, JR_gopher) 
 JR_tog <- left_join(JR_tog3, JR_tog_prev)
+
+JR_mean0 <- JR_tog %>%
+  group_by(Genus, Species, LifeForm, species, soilDepth, maxSoilDepth, minSoilDepth, plot, treatment, trtrep) %>%
+  summarize(meancover = mean(cover), secover = sd(cover)/sqrt(length(cover)),
+            maxcover = max(cover)) 
+
+JR_mean <- left_join(JR_mean0, JR_gopher_mean)
 
 JR_togmean <- left_join(JR_tog, JR_mean)
 
@@ -56,8 +75,7 @@ l <- lme(cover ~ treatment + soilDepth + disturb + ppt + prevprecip, random = ~1
          data = subset(JR_tog, species == "PLER"), na.action = na.omit)
 summary(l)
 
-library(lme4)
-library(lmerTest)
+
 
 l <- lmer(cover ~ treatment + soilDepth + disturb + ppt + prevprecip + (1|trtrep/uniqueID) + (1|year), 
           data = subset(JR_tog, species == "PLER"), na.action = na.omit)
@@ -67,19 +85,35 @@ l <- lmer(cover ~ soilDepth + disturb + ppt + (1|trtrep/uniqueID) + (1|year),
 
 summary(l)
 
-dat <- JR_togmean %>%
-  filter(species == "STPU") %>%
+# "BRSP", "VUMY",
+
+myspp <- unique(JR_togmean$species)
+myspp <- c("CAMU", "HELU", "LACA", "BRMO", "LOMU", "EVSP", "PLER",  
+            "LOSU", "SIJU", "STPU", "LAPL", "ORDE", "VUMI",
+           "CHPO", "BR__", "TIER", "MIDO", "ASGA")
+lmoutput3 <- data.frame(variable = as.character(), estimate = as.numeric(), stderr = as.numeric(), df = as.numeric(), tval = as.numeric(), 
+                       pval = as.numeric(), species = as.numeric(), Genus = as.numeric(), Species = as.numeric())
+for(i in 1:length(myspp)) {
+  
+dat <- subset(JR_togmean, species == myspp[i]) %>%
   filter(!is.na(cover), !is.na(precip), !is.na(prevprecip))
 
-l <- lmer(cover ~  disturb + soilDepth+ precip + prevprecip  + meandisturb + 
+l <- lmer(cover ~    soilDepth+ precip + prevprecip  + meandisturb + 
             (1|trtrep/uniqueID) + 
             (1|year), 
           data = dat, na.action = na.omit)
 
-summary(l)
+
 step_res <- step(l)
 final <- get_model(step_res)
-summary(final)
+
+lmout <- tidy(summary(final)$coefficients)
+names(lmout) = c("variable", "estimate", "stderr", "df", "tval", "pval")
+lmout$species <- unique(dat$species)
+lmout$Genus <- unique(dat$Genus)
+lmout$Species <- unique(dat$Species)
+lmoutput3 <- rbind(lmoutput3, lmout)
+}
 
 anova(final)
 
