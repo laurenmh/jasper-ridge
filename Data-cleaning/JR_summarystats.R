@@ -91,14 +91,14 @@ myspp <- unique(JR_togmean$species)
 myspp <- c("CAMU", "HELU", "LACA", "BRMO", "LOMU", "EVSP", "PLER",  
             "LOSU", "SIJU", "STPU", "LAPL", "ORDE", "VUMI",
            "CHPO", "BR__", "TIER", "MIDO", "ASGA")
-lmoutput3 <- data.frame(variable = as.character(), estimate = as.numeric(), stderr = as.numeric(), df = as.numeric(), tval = as.numeric(), 
+lmoutput2 <- data.frame(variable = as.character(), estimate = as.numeric(), stderr = as.numeric(), df = as.numeric(), tval = as.numeric(), 
                        pval = as.numeric(), species = as.numeric(), Genus = as.numeric(), Species = as.numeric())
 for(i in 1:length(myspp)) {
   
 dat <- subset(JR_togmean, species == myspp[i]) %>%
   filter(!is.na(cover), !is.na(precip), !is.na(prevprecip))
 
-l <- lmer(cover ~    soilDepth+ precip + prevprecip  + meandisturb + 
+l <- lmer(cover ~   disturb + soilDepth+ precip + prevprecip  + meandisturb + fall_ppt + winter_ppt + 
             (1|trtrep/uniqueID) + 
             (1|year), 
           data = dat, na.action = na.omit)
@@ -112,12 +112,9 @@ names(lmout) = c("variable", "estimate", "stderr", "df", "tval", "pval")
 lmout$species <- unique(dat$species)
 lmout$Genus <- unique(dat$Genus)
 lmout$Species <- unique(dat$Species)
-lmoutput3 <- rbind(lmoutput3, lmout)
+lmoutput2 <- rbind(lmoutput2, lmout)
 }
 
-anova(final)
-
-summary(l)
 
 
 
