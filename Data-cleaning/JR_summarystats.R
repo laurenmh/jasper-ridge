@@ -6,6 +6,7 @@ library(lme4)
 library(lmerTest)
 library(nlme)
 library(broom)
+library(cowplot)
 
 ## Set ggplot2 theme
 theme_set(theme_bw())
@@ -71,34 +72,44 @@ JR_mean <- left_join(JR_mean0, JR_gopher_mean)
 
 JR_togmean <- left_join(JR_tog, JR_mean)
 
-l <- lme(cover ~ treatment + soilDepth + disturb + ppt + prevprecip, random = ~1|trtrep/plot/uniqueID/year, 
-         data = subset(JR_tog, species == "PLER"), na.action = na.omit)
-summary(l)
 
 
 
-l <- lmer(cover ~ treatment + soilDepth + disturb + ppt + prevprecip + (1|trtrep/uniqueID) + (1|year), 
-          data = subset(JR_tog, species == "PLER"), na.action = na.omit)
+JR_mean0 <- JR_tog %>%
+  group_by(Genus, Species, LifeForm, species, soilDepth, maxSoilDepth, minSoilDepth, plot, treatment, trtrep) %>%
+  summarize(meancover = mean(cover), secover = sd(cover)/sqrt(length(cover)),
+            maxcover = max(cover)) 
 
-l <- lmer(cover ~ soilDepth + disturb + ppt + (1|trtrep/uniqueID) + (1|year), 
-          data = subset(JR_tog, species == "PLER"), na.action = na.omit)
+JR_mean <- left_join(JR_mean0, JR_gopher_mean)
 
-summary(l)
 
-# "BRSP", "VUMY",
+JR_mean_time_0 <- left_join(JR_tog, JR_tog_prev) %>%
+  mutate(coverchange = (cover - prevcover)/prevcover) %>%
+  group_by(Genus, Species, LifeForm, species, year, precip,  year, treatment, prevprecip) %>%
+  summarize(meancover = mean(cover), secover = sd(cover)/sqrt(length(cover)),
+            meancoverchange = mean(coverchange), secoverchange = sd(coverchange)/sqrt(length(coverchange)),
+            meanprevcover = mean(prevcover))
 
-myspp <- unique(JR_togmean$species)
+
+JR_gopher_mean_time <- left_join(JR_gopher, JR_rain) %>%
+  group_by( year, precip,  year, treatment) %>%
+  summarize(meandisturb = mean(disturb), sedisturb = sd(disturb)/sqrt(length(disturb)))
+
+
+JR_mean_time <- left_join(JR_mean_time_0, JR_gopher_mean_time)
+
+
 myspp <- c("CAMU", "HELU", "LACA", "BRMO", "LOMU", "EVSP", "PLER",  
             "LOSU", "SIJU", "STPU", "LAPL", "ORDE", "VUMI",
            "CHPO", "BR__", "TIER", "MIDO", "ASGA")
-lmoutput2 <- data.frame(variable = as.character(), estimate = as.numeric(), stderr = as.numeric(), df = as.numeric(), tval = as.numeric(), 
+lmoutput <- data.frame(variable = as.character(), estimate = as.numeric(), stderr = as.numeric(), df = as.numeric(), tval = as.numeric(), 
                        pval = as.numeric(), species = as.numeric(), Genus = as.numeric(), Species = as.numeric())
 for(i in 1:length(myspp)) {
   
 dat <- subset(JR_togmean, species == myspp[i]) %>%
   filter(!is.na(cover), !is.na(precip), !is.na(prevprecip))
 
-l <- lmer(cover ~   disturb + soilDepth+ precip + prevprecip  + meandisturb + fall_ppt + winter_ppt + 
+l <- lmer(cover ~  soilDepth+ precip + prevprecip  + meandisturb + fall_ppt + winter_ppt + 
             (1|trtrep/uniqueID) + 
             (1|year), 
           data = dat, na.action = na.omit)
@@ -112,7 +123,7 @@ names(lmout) = c("variable", "estimate", "stderr", "df", "tval", "pval")
 lmout$species <- unique(dat$species)
 lmout$Genus <- unique(dat$Genus)
 lmout$Species <- unique(dat$Species)
-lmoutput2 <- rbind(lmoutput2, lmout)
+lmoutput <- rbind(lmoutput, lmout)
 }
 
 
@@ -126,12 +137,12 @@ a <-ggplot(JR_gopher_mean_time, aes(x=year, y=meandisturb/4*100)) +
 #  geom_errorbar(aes(ymin = meandisturb/4*100 - sedisturb/4*100,
 #                    ymax = meandisturb/4*100 + sedisturb/4*100)) + 
   scale_color_manual(values = c("grey45",  "grey65",  "grey10")) + 
-  theme(legend.position = "none") + labs(x="Year", y = "Percent disturbance") + 
-  geom_smooth()
+  theme(legend.position = "none") + labs(x="Year", y = "Percent disturbance") 
 
-b <- ggplot(JR_rain, aes(x=year, y=precip)) + geom_line() + geom_smooth()
+b <- ggplot(subset(JR_rain, year != 1982), aes(x=year, y=precip)) + geom_line(lwd = 1.1) + labs(x = "Year", y="Precipitation (mm)")
 
-plot_grid(a,b, ncol = 1)
+plot_grid(a + theme(axis.text.x = element_blank(), axis.title.x = element_blank()),
+          b, ncol = 1, align = c("vh"), axis = "tblr")
 
 ggplot(JR_gopher_mean, aes(x=soilDepth, y=meandisturb/4*100)) +
   geom_smooth(se=F, method = "lm", color = "grey") + geom_point() +
@@ -170,49 +181,8 @@ step_res <- step(l)
 final <- get_model(step_res)
 summary(final)
 
-
-
-JR_mean0 <- JR_tog %>%
-  group_by(Genus, Species, LifeForm, species, soilDepth, maxSoilDepth, minSoilDepth, plot, treatment, trtrep) %>%
-  summarize(meancover = mean(cover), secover = sd(cover)/sqrt(length(cover)),
-            maxcover = max(cover)) 
-  
-JR_mean <- left_join(JR_mean0, JR_gopher_mean)
-
-JR_tog_prev <- JR_tog %>%
-  select(year, species, uniqueID, cover, precip) %>%
-  mutate(year = year + 1) %>%
-  mutate(prevcover = cover, prevprecip = precip) %>%
-  select(-cover, - precip)
-
-JR_mean_time_0 <- left_join(JR_tog, JR_tog_prev) %>%
-  mutate(coverchange = (cover - prevcover)/prevcover) %>%
-  group_by(Genus, Species, LifeForm, species, year, precip,  year, treatment, prevprecip) %>%
-  summarize(meancover = mean(cover), secover = sd(cover)/sqrt(length(cover)),
-            meancoverchange = mean(coverchange), secoverchange = sd(coverchange)/sqrt(length(coverchange)),
-            meanprevcover = mean(prevcover))
-  
-
-JR_gopher_mean_time <- left_join(JR_gopher, JR_rain) %>%
-  group_by( year, precip,  year, treatment) %>%
-  summarize(meandisturb = mean(disturb), sedisturb = sd(disturb)/sqrt(length(disturb)))
-
-
-JR_mean_time <- left_join(JR_mean_time_0, JR_gopher_mean_time)
-
 ggplot(JR_mean_time, aes(x=meandisturb, y = meancover, color = treatment)) + geom_point() + facet_wrap(~species, scale = "free")
 
-
-
-JR_x1 <- left_join(JR_tog, JR_tog_prev) %>%
-  filter(species == "LOSU" | species == "ASGA" | species == "TRSP" | species == "BRHO") 
-
-ggplot(subset(JR_tog, species == "BRMO"), aes(x=year, y =cover, color = soilDepth, group = uniqueID)) +
-         geom_line(lwd=1.5) + theme_bw() + facet_grid(trtrep~treatment)
-
-ggplot(subset(JR_tog, species == "BRMO"), aes(x=year, y =cover,  group = uniqueID)) +
-  geom_line(lwd=1) + theme_bw() + facet_grid(trtrep~treatment) +
-  geom_point(aes(color = disturb), size = 3) 
 
 
 ### CORRELATIONS ####
@@ -307,74 +277,6 @@ JR_mean_focal <- JR_mean %>%
   tbl_df() %>%
   mutate(dummy = "")
 
-ggplot(JR_mean_focal, aes(x=treatment, y=meancover)) + facet_wrap(~Genus, scales = "free") + 
-  geom_boxplot()
-
-
-
-
-
-
-a <- ggplot(JR_mean_time_focal, aes(x=year, y=meancover, shape = treatment, lty = treatment)) + geom_line() + 
-  geom_point() + facet_grid(Genus~dummy, scale = "free", switch = "y") + theme(legend.position = "none") + 
-  labs(x="Year", y= "Average cover m2") + theme(strip.placement = "outside") 
-
-
-c <- ggplot(JR_mean_focal, aes(x=meandisturb/4*100, y=meancover)) + facet_grid(Genus~dummy, scales = "free") + 
-  geom_point() + 
-  # geom_smooth(data = subset(JR_mean_focal, species == "BRMO"), aes(meandisturb, meancover),
-  #             method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "CAMU"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "LACA"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "LAPL"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "LOSU"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "PLER"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "BR__"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "ORDE"), aes(meandisturb/4*100, meancover),
-              method = lm, se = FALSE) + theme(strip.background = element_blank(), strip.text = element_blank()) + 
-  labs(x="Percent disturbance over time", y = "")
-
-l <- lm(meancover ~ meandisturb  +soilDepth, data = subset(JR_mean_focal, species == "TIER"))
-summary(l)
-
-
-
-b <- ggplot(JR_mean_focal, aes(x=soilDepth, y=meancover)) + facet_grid(Genus~dummy, scales = "free") + 
-  geom_point() + 
-#  geom_smooth(data = subset(JR_mean_focal, species == "BRMO"), aes(soilDepth, meancover),
- #             method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "CAMU"), aes(soilDepth, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "LOSU"), aes(soilDepth, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_focal, species == "PLER"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "EVSP"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "VUMI"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "CHPO"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "STPU"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "TIER"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "HELU"), aes(soilDepth, meancover),
-              method = lm, se = FALSE)+ 
-  geom_smooth(data = subset(JR_mean_focal, species == "SIJU"), aes(soilDepth, meancover),
-              method = lm, se = FALSE) + theme(strip.background = element_blank(), strip.text = element_blank()) + 
-  labs(x="Soil depth (cm)", y = "")
-
-
-l <- lm(meancover ~  meandisturb + soilDepth, data = subset(JR_mean_focal, species == "ORDE"))
-summary(l)
-
 
 
 JR_mean_time_focal <- JR_mean_time %>%
@@ -406,43 +308,6 @@ JR_mean_time_focal2 <- JR_mean_time %>%
                                       "Chlorogalum", "Brodiaea", "Evax", "Tillaea"))) %>%
   tbl_df() %>%
   mutate(dummy = "")
-
-
-
-
-ggplot(JR_mean_time_focal, aes(x=precip, y=meancover)) + facet_wrap(~species, scales = "free") + 
-  geom_point() + geom_smooth(se = F)
-
-ggplot(JR_mean_time_focal, aes(x=year, y=meancover)) + geom_line(aes(shape = treatment, lty = treatment)) + 
-  geom_point(aes(shape = treatment, lty = treatment)) + facet_wrap(~Genus, scale = "free") + geom_smooth(se=F, method = "lm")
-
-ggplot(JR_mean_time_focal2, aes(x=precip, y=meancover, color)) + facet_grid(Genus~dummy, scales = "free") + 
-  geom_point() + 
-  # geom_smooth(data = subset(JR_mean_time_focal, species == "BRMO"), aes(precip, meancover),
-  #             method = lm, se = FALSE) + 
-  # geom_smooth(data = subset(JR_mean_time_focal2, species == "CAMU"), aes(precip, meancover),
-  #             method = lm, se = FALSE) + 
-  # geom_smooth(data = subset(JR_mean_time_focal2, species == "EVSP"), aes(precip, meancover),
-  #             method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_time_focal2, species == "LACA"), aes(precip, meancover),
-              method = lm, se = FALSE) + 
-  # geom_smooth(data = subset(JR_mean_time_focal2, species == "LAPL"), aes(precip, meancover),
-  #             method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_time_focal2, species == "SIJU"), aes(precip, meancover),
-              method = lm, se = FALSE) + 
-  geom_smooth(data = subset(JR_mean_time_focal2, species == "TIER"), aes(precip, meancover),
-              method = lm, se = FALSE) #+
-  # geom_smooth(data = subset(JR_mean_time_focal2, species == "VUMI"), aes(precip, meancover),
-  #                                                   method = lm, se = FALSE) +
-  # geom_smooth(data = subset(JR_mean_time_focal2, species == "CHPO"), aes(precip, meancover),
-  #             method = lm, se = FALSE) + theme(strip.background = element_blank(), strip.text = element_blank()) + 
-labs(x="Soil depth (cm)", y = "")
-
-
-l <- lm(meancover ~ precip, data = subset(JR_mean_time_focal2, species == "LAPL"))
-summary(l)
-
-
 
 
 #### THE BIG PANEL FIG
