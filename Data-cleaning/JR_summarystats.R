@@ -47,7 +47,13 @@ JR_spp <- read_csv("~/Dropbox/California Data/JR_species names.csv") %>%
 
 JR_gopher_mean <- left_join(JR_gopher, JR_soil) %>%
   group_by(soilDepth, maxSoilDepth, minSoilDepth, plot, treatment, trtrep) %>%
-  summarize(meandisturb = mean(disturb), sedisturb = sd(disturb)/sqrt(length(disturb)))
+  summarize(meandisturb = mean(disturb), sedisturb = sd(disturb)/sqrt(length(disturb))) %>%
+  mutate(treatment2 = as.factor(treatment),
+         treatment2 = reorder(treatment2, values = c(g,c, r)))
+
+         
+         treatment2 = recode(treatment2, g = "Gopher excl", c = "Control", r = "Rabbit excl"),
+        treatment2 = stats::reorder(treatment2, `Gopher excl`,Control, `Rabbit excl`))
 
 
 JR_tog0 <- left_join(JR_aggcover, JR_soil)
@@ -80,7 +86,10 @@ JR_mean0 <- JR_tog %>%
   summarize(meancover = mean(cover), secover = sd(cover)/sqrt(length(cover)),
             maxcover = max(cover)) 
 
-JR_mean <- left_join(JR_mean0, JR_gopher_mean)
+JR_mean <- left_join(JR_mean0, JR_gopher_mean) %>%
+  mutate(treatment2 = as.factor(treatment),
+         treatment2 = recode(treatment2, g = "Gopher excl", c = "Control", r = "Rabbit excl"),
+         treatment2 = fct_relevel(treatment2, "Gopher excl","Control", "Rabbit excl"))
 
 
 JR_mean_time_0 <- left_join(JR_tog, JR_tog_prev) %>%
@@ -148,6 +157,8 @@ ggplot(JR_gopher_mean, aes(x=soilDepth, y=meandisturb/4*100)) +
   geom_smooth(se=F, method = "lm", color = "grey") + geom_point() +
   labs(x = "Soil depth (cm)", y = "Percent disturbance")
 
+ggplot(JR_gopher_mean, aes(x=treatment2, y=meandisturb/4*100)) + geom_boxplot() +
+  labs(x = "Treatment", y = "Percent disturbance")
 
 gophrain <- left_join(JR_gopher_mean_time, JR_tog_prev %>% select(year, prevprecip) %>%unique())
 
