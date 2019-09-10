@@ -3,7 +3,7 @@ library(tsvr)
 
 plst <- tog %>%
   # filter(species == "PLER" | species == "SIJU") %>%
-  mutate(keepdat = ifelse(rowdif == 0 & cover > 3, 1, 0)) %>%
+  mutate(keepdat = ifelse(rowdif == 0 & cover > 10, 1, 0)) %>%
   
   # mutate(keepdat = ifelse(rowdif == 0 & species == "PLER" & cover > 5, 1, 0),
   #        keepdat = ifelse(rowdif == 0 & species == "SIJU" & cover > 5, 1, keepdat)) %>%
@@ -68,44 +68,7 @@ ggsave("Plantago-Sitanion_gopher-recover.pdf", width = 6, height = 5)
 ## now for tsvr
 
 
-demo <- subset(plst3, rowdif < 9) %>%
-  select(rowdif, species, cover) %>%
-  spread(species, cover)
 
-d <- t(as.matrix(demo[,2:dim(demo)[2]]))
-
-
-res0 <- vreq_classic(d)
-classicVR <- res0[[3]]
-
-res <-tsvreq_classic(d)
-
-aggresLong<-aggts(res,res$ts[res$ts>=4])
-aggresShort<-aggts(res,res$ts[res$ts<4])
-
-longVR <- aggresLong[[3]]
-shortVR <- aggresShort[[3]]
-
-demoout <- data.frame(rbind(classicVR, longVR, shortVR))
-names(demoout) = "value"
-demoout$metric <- row.names(demoout)
-demoout$metric2 <- c("Classic", "Long 
-                     Time-Scale", "Short 
-                     Time-Scale")
-demoout$facorder <- c(3,2,1)
-
-ggplot(demoout, aes(x=reorder(metric2, facorder), y=value, color = metric2)) + 
-  geom_point(size = 3) + ylim(.5, 2) +
-  theme_bw() + 
-  theme(legend.position = "none", text = element_text(size = 14)) + labs(y="Variance Ratio", x = "") + 
-  geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
-  scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue")) 
-ggsave("Plantago-Sitanion_tsvr_demodat.pdf", width = 5, height = 5)  
-
-
-
-
-# now for each replicate at a time ----------------------------------------
 
 
 ## all data
