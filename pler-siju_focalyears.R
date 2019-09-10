@@ -1,11 +1,25 @@
 source("Data-cleaning/times-since-gopher.R")
 library(tsvr)
 
+threshold <- 3
 
 plstcheck <- tog %>%
-  mutate(keepdat = ifelse(rowdif == 0 & cover > 3, 1, 0)) %>%
+  # only keep a record if the cover is above a threshold value in the initial year
+  mutate(keepdat = ifelse(rowdif == 0 & cover > threshold, 1, 0)) %>%
+  filter(keepdat == 1) %>%
+  
+  # subset the focal species
   filter(species == "PLER" | species == "SIJU") %>%
+  
+  # only keep a plot if both species are above the threshold
+  group_by(quadID, treatment, trtrep, subplot, repnum2) %>%
+  mutate(nospp = length(unique((species)))) %>%
+  filter(nospp == 2) %>%
+  
+  # restrict to ts with at least 8 recrods
   filter(ncount > 9) %>%
+  
+  # identify the starting year for each record
   group_by(species, quadID, treatment, trtrep, subplot, repnum2) %>%
   summarize(year = min(year))
 
@@ -13,8 +27,7 @@ plstcheck2 <- plstcheck %>%
   group_by(species, year) %>%
   summarize(repplots = n()) %>%
   tbl_df() %>%
-  select(-species) %>%
-  unique() 
+  spread(species, repplots)
 
 plstyears <- plstcheck2 %>%
   filter(repplots > 9 & repplots < 40)
@@ -24,82 +37,64 @@ myyears <- plstyears$year
 ## in replicate years with at least 10 data points
 
 plst <- tog %>%
-  mutate(keepdat = ifelse(rowdif == 0 & cover > 3, 1, 0)) %>%
-  filter(species == "PLER" | species == "SIJU") %>%
-  # mutate(keepdat = ifelse(rowdif == 0 & species == "PLER" & cover > 5, 1, 0),
-  #        keepdat = ifelse(rowdif == 0 & species == "SIJU" & cover > 5, 1, keepdat)) %>%
-  # mutate(keepdat2 = ifelse(timepoint == 0 & species == "PLER" & cover < 5, 1, 0),
-  #        keepdat2 = ifelse(timepoint == 0 & species == "SIJU" & cover < 4, 1, keepdat2)) %>%
+  # only keep a record if the cover is above a threshold value in the initial year
+  mutate(keepdat = ifelse(rowdif == 0 & cover > threshold, 1, 0)) %>%
   group_by(repnum2, species, quadID) %>%
   mutate(maxkeep = max(keepdat)) %>%
   filter(maxkeep > 0) %>%
-  tbl_df() %>%
+  
+  # subset the focal species
+  filter(species == "PLER" | species == "SIJU") %>%
+  
+  # only keep a plot if both species are above the threshold
+  group_by(quadID, treatment, trtrep, subplot, repnum2) %>%
+  mutate(nospp = length(unique((species)))) %>%
+  filter(nospp == 2) %>%
+  
+  # restrict to ts with at least 8 recrods
   filter(ncount > 9) %>%
+  
+  #identify the first year
   group_by(species, quadID, treatment, trtrep, subplot, repnum2) %>%
-  mutate(minyear = min(year)) %>%
-  filter(minyear%in%c(myyears))
+  mutate(minyear = min(year))
+  
 
-ggplot(subset(plst, rowdif < 11), aes(x=rowdif, y=cover, color = species, group = interaction(species,quadID))) + geom_line() + facet_wrap(~minyear) 
+
+
+ggplot(subset(plst, rowdif < 11), aes(x=rowdif, y=cover, color = species, group = interaction(species,quadID))) + 
+  geom_line() + facet_wrap(~interaction(minyear,quadID))
+
+
 
 plst2 <- plst %>%
   group_by(rowdif, quadID, species, treatment, minyear) %>%
   summarize(meancover = mean(cover)) %>%
   tbl_df() %>%
-  group_by(rowdif, species, minyear) %>%
-  summarize(cover = mean(meancover), secover = calcSE(meancover)) 
-
-ggplot(plst2, aes(x=rowdif, y=cover, color = species)) + geom_point()  +
-  geom_line() + xlim(0,8) + facet_wrap(~minyear)
-
-plst3 <- plst %>%
-  filter(species == "PLER" | species == "SIJU") %>%
-  group_by(rowdif, quadID, species, treatment) %>%
-  summarize(meancover = mean(cover)) %>%
-  tbl_df() %>%
-  group_by(species, quadID) %>%
-  # mutate(maxcover = ifelse(rowdif == 0, meancover, NA),
-  #        maxcover = max(maxcover, na.rm=T),
-  #        meancover = (meancover -maxcover)/maxcover) %>%
-  tbl_df() %>%
   group_by(rowdif, species) %>%
   summarize(cover = mean(meancover), secover = calcSE(meancover)) 
 
 
-ggplot(subset(plst3, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + geom_point() +
-  geom_hline(yintercept = 1, color = "grey", lty = "dashed") +
-  geom_line() +
-  geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2)
-
-
-plst3 <- plst %>%
-  filter(species == "PLER" | species == "SIJU") %>%
-  group_by(rowdif, quadID, species, treatment) %>%
-  summarize(meancover = mean(cover)) %>%
-  tbl_df() %>%
-  group_by(rowdif, species) %>%
-  summarize(cover = mean(meancover), secover = calcSE(meancover)) 
-
-
-ggplot(subset(plst3, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + geom_point() + 
+ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + 
   geom_vline(xintercept = 1, color = "lightgrey", lwd = 10) + 
   geom_hline(yintercept = 9.47, color = "darkgrey", lty = "dashed") +
   geom_hline(yintercept = 23.0, color = "darkgrey", lty = "dashed") +
   geom_line() +
+  geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
   theme_classic() + labs(y="Percent cover", x = "Time point", color ="Species") + theme(text = element_text(size =14))
 ggsave("Plantago-Sitanion_gopher-recover.pdf", width = 6, height = 5)
 
 
 
-
+## calculate the VRs within each quadID
 outnames<-c("quadID", "treatment", "classicVR", "longVR", "shortVR")
 siteout<-as.data.frame(matrix(nrow=0, ncol=5))
 names(siteout)<-outnames
-quads <- unique(plstall2$quadID)
+quads <- unique(plst$quadID)
 
 for (i in 1:length(quads)){
   
-  subber <- subset(plstall2, quadID == quads[i]) %>%
+  subber <- subset(plst, quadID == quads[i]) %>%
     tbl_df()
   
   subber2 <- subber %>%
@@ -127,29 +122,27 @@ for (i in 1:length(quads)){
   
 }
 
+# aggregate and summarize the ts values
 siteout2 <- siteout %>%
   gather(metric, value, classicVR:shortVR) %>%
-  group_by(treatment, metric) %>%
+  group_by(metric) %>%
   summarize(meanval = mean(value), seval = sd(value)/sqrt(n()))
 siteout2$metric2 <- c("Classic", "Long 
                       Time-Scale", "Short 
-                      Time-Scale", "Classic", "Long 
-                      Time-Scale", "Short 
                       Time-Scale")
-siteout2$facorder <- c(3,2,1, 3, 2,1)
-siteout2$treatment2 <- c(rep("Control", 3), rep("Gopher Excluded", 3))
+siteout2$facorder <- c(3,2,1)
 
 
+# plot the average and se of the
 #ggplot(siteout2, aes(x=metric, y = value, color = metric)) + geom_boxplot() + facet_wrap(~treatment)
 ggplot(siteout2, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
   geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
   geom_point(size = 3) + 
-  facet_wrap(~treatment2) +
   geom_errorbar(aes(ymin = meanval - seval, ymax = meanval + seval), width = .2) + ylim(0.75,1.25) +
   theme_bw() + theme(legend.position = "none", text = element_text(size = 14)) + 
   scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue"))  + 
   labs(x = "", y="Variance Ratio")
-ggsave("Plantago-Sitanion_tsvr_alldat.pdf", width = 8, height = 5)  
+ggsave("Plantago-Sitanion_tsvr_focalyears.pdf", width = 8, height = 5)  
 
 
 
