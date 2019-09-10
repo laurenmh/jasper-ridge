@@ -82,7 +82,7 @@ ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) +
   geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
   theme_classic() + labs(y="Percent cover", x = "Time point", color ="Species") + theme(text = element_text(size =14))
-ggsave("Plantago-Sitanion_gopher-recover.pdf", width = 6, height = 5)
+ggsave("Plantago-Sitanion_gopher-recover-focalyears.pdf", width = 6, height = 5)
 
 
 
