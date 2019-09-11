@@ -76,8 +76,8 @@ plst2 <- plst %>%
 
 ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + 
   geom_vline(xintercept = 1, color = "lightgrey", lwd = 10) + 
-  geom_hline(yintercept = 9.47, color = "darkgrey", lty = "dashed") +
-  geom_hline(yintercept = 23.0, color = "darkgrey", lty = "dashed") +
+  geom_hline(yintercept = 9.48, color = "darkgrey", lty = "dashed") +
+  geom_hline(yintercept = 27, color = "darkgrey", lty = "dashed") +
   geom_line() +
   geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
@@ -128,8 +128,8 @@ siteout2 <- siteout %>%
   group_by(metric) %>%
   summarize(meanval = mean(value), seval = sd(value)/sqrt(n()))
 siteout2$metric2 <- c("Classic", "Long 
-                      Time-Scale", "Short 
-                      Time-Scale")
+Time-Scale", "Short 
+Time-Scale")
 siteout2$facorder <- c(3,2,1)
 
 
