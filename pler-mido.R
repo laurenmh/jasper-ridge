@@ -1,6 +1,7 @@
 source("Data-cleaning/times-since-gopher.R")
 library(tsvr)
-
+library(cowplot)
+library(grid)
 threshold <- 3
 
 plmi <- tog %>%
@@ -41,15 +42,15 @@ plmi2 <- plmi %>%
   summarize(cover = mean(meancover), secover = calcSE(meancover)) 
 
 
-ggplot(subset(plmi2, rowdif < 15), aes(x=rowdif, y=cover, color = species)) + 
+a <- ggplot(subset(plmi2, rowdif < 15), aes(x=rowdif, y=cover, color = species)) + 
   geom_vline(xintercept = 1, color = "lightgrey", lwd = 10) + 
-  geom_hline(yintercept = 11.2, color = "darkgrey", lty = "dashed") +
-  geom_hline(yintercept = 20.4, color = "darkgrey", lty = "dashed") +
+ # geom_hline(yintercept = 11.2, color = "darkgrey", lty = "dashed") +
+#  geom_hline(yintercept = 20.4, color = "darkgrey", lty = "dashed") +
   geom_line() +
   geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
   theme_classic() + labs(y="Percent cover", x = "Time point", color ="Species") + theme(text = element_text(size =14)) 
-ggsave("Plantago-Microsersis_gopher-recover-focalyears.pdf", width = 6, height = 5)
+#ggsave("Plantago-Microsersis_gopher-recover-focalyears.pdf", width = 6, height = 5)
 
 plmi3 <- plmi %>%
   group_by(rowdif, quadID, species, treatment, minyear) %>%
@@ -65,7 +66,7 @@ ggplot(subset(plmi3, rowdif < 15), aes(x=rowdif, y=cover, color = species)) +
   geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
   theme_classic() + labs(y="Percent cover", x = "Time point", color ="Species") + theme(text = element_text(size =14)) + facet_wrap(~minyear)
-ggsave("Plantago-Microsersis_gopher-recover-focalyears-faceted.pdf", width = 10, height = 7)
+#ggsave("Plantago-Microsersis_gopher-recover-focalyears-faceted.pdf", width = 10, height = 7)
 
 
 
@@ -118,11 +119,28 @@ siteout2$facorder <- c(3,2,1)
 
 # plot the average and se of the
 #ggplot(siteout2, aes(x=metric, y = value, color = metric)) + geom_boxplot() + facet_wrap(~treatment)
-ggplot(siteout2, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
+b <- ggplot(siteout2, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
   geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
   geom_point(size = 3) + 
   geom_errorbar(aes(ymin = meanval - seval, ymax = meanval + seval), width = .2)  +
-  theme_bw() + theme(legend.position = "none", text = element_text(size = 14)) + 
-  scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue"))  + 
+  theme_classic() + theme(legend.position = "none", text = element_text(size = 14)) + 
+  scale_color_manual(values = c( "lightseagreen", "darkgreen",  "blue"))  + 
   labs(x = "", y="Variance Ratio")
-ggsave("Plantago-Microseris_tsvr_focalyears-repnumunder15.pdf", width = 8, height = 5)  
+#ggsave("Plantago-Microseris_tsvr_focalyears-repnumunder15.pdf", width = 8, height = 5)  
+
+
+
+legd <- legendGrob(c("Short-term Driver VR", "Long-term Driver VR","Classic VR", expression(italic("Microseris")), expression(italic("Plantago"))), do.lines=TRUE,
+                   gp=gpar(col = c("blue", "darkgreen", "lightseagreen", "black", "darkgrey"), lwd = 2), nrow = 1)
+
+
+c <- plot_grid(a + theme(legend.position = "none") + annotate("text", x=0, y =32, label="a)", size = 5) +
+            scale_color_manual(values = c("black","darkgrey")) + labs(x="Time", y = "Percent Cover") + 
+            theme(panel.border = element_rect(colour = "black", fill=NA, size=.75)),
+          b  + annotate("text", x=.6, y =1.25, label="b)", size = 5) +
+            theme(panel.border = element_rect(colour = "black", fill=NA, size=.75)),
+          align = c("hv"))
+
+pdf("pler-mido-2panels.pdf", width = 10, height = 5)
+plot_grid(c, legd, nrow = 2, rel_heights = c(9.5,.5))
+dev.off()

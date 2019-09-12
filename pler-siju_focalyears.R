@@ -1,5 +1,6 @@
 source("Data-cleaning/times-since-gopher.R")
 library(tsvr)
+library(cowplot)
 
 threshold <- 3
 
@@ -74,7 +75,7 @@ plst2 <- plst %>%
   summarize(cover = mean(meancover), secover = calcSE(meancover)) 
 
 
-ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + 
+a <- ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + 
   geom_vline(xintercept = 1, color = "lightgrey", lwd = 10) + 
   geom_hline(yintercept = 9.48, color = "darkgrey", lty = "dashed") +
   geom_hline(yintercept = 27, color = "darkgrey", lty = "dashed") +
@@ -82,7 +83,7 @@ ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) +
   geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
   theme_classic() + labs(y="Percent cover", x = "Time point", color ="Species") + theme(text = element_text(size =14))
-ggsave("Plantago-Sitanion_gopher-recover-focalyears.pdf", width = 6, height = 5)
+#ggsave("Plantago-Sitanion_gopher-recover-focalyears.pdf", width = 6, height = 5)
 
 
 
@@ -135,15 +136,33 @@ siteout2$facorder <- c(3,2,1)
 
 # plot the average and se of the
 #ggplot(siteout2, aes(x=metric, y = value, color = metric)) + geom_boxplot() + facet_wrap(~treatment)
-ggplot(siteout2, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
+b <- ggplot(siteout2, aes(x=reorder(metric2, facorder), y = meanval, color = metric)) +   
   geom_hline(yintercept = 1, color = "grey", lty = "dashed") + 
   geom_point(size = 3) + 
   geom_errorbar(aes(ymin = meanval - seval, ymax = meanval + seval), width = .2) + ylim(0.75,1.25) +
-  theme_bw() + theme(legend.position = "none", text = element_text(size = 14)) + 
-  scale_color_manual(values = c( "turquoise4", "darkgreen",  "darkblue"))  + 
+  theme_classic() + theme(legend.position = "none", text = element_text(size = 14)) + 
+  scale_color_manual(values = c( "lightseagreen", "darkgreen",  "blue"))  + 
   labs(x = "", y="Variance Ratio")
-ggsave("Plantago-Sitanion_tsvr_focalyears.pdf", width = 8, height = 5)  
+#ggsave("Plantago-Sitanion_tsvr_focalyears.pdf", width = 8, height = 5)  
 
+#ggsave("Plantago-Microseris_tsvr_focalyears-repnumunder15.pdf", width = 8, height = 5)  
+
+
+
+legd <- legendGrob(c("Short-term Driver VR", "Long-term Driver VR","Classic VR", expression(italic("Plantago")), expression(italic("Elymus"))), do.lines=TRUE,
+                   gp=gpar(col = c("blue", "darkgreen", "lightseagreen", "darkorchid1", "orange3"), lwd = 2), nrow = 1)
+
+
+c <- plot_grid(a + theme(legend.position = "none") + annotate("text", x=0, y =32, label="a)", size = 5) +
+                 scale_color_manual(values = c("darkorchid1", "orange3")) + labs(x="Time", y = "Percent Cover") + 
+                 theme(panel.border = element_rect(colour = "black", fill=NA, size=.75)),
+               b  + annotate("text", x=.6, y =1.25, label="b)", size = 5) +
+                 theme(panel.border = element_rect(colour = "black", fill=NA, size=.75)),
+               align = c("hv"))
+
+pdf("annual_perennial_empirical.pdf", width = 10, height = 5)
+plot_grid(c, legd, nrow = 2, rel_heights = c(9.5,.5))
+dev.off()
 
 
 
