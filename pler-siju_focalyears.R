@@ -1,45 +1,47 @@
 source("Data-cleaning/times-since-gopher.R")
 library(tsvr)
 library(cowplot)
+library(grid)
 
 threshold <- 3
+upperthreshold <- 50
 
-plstcheck <- tog %>%
-  # only keep a record if the cover is above a threshold value in the initial year
-  mutate(keepdat = ifelse(rowdif == 0 & cover > threshold, 1, 0)) %>%
-  filter(keepdat == 1) %>%
-  
-  # subset the focal species
-  filter(species == "PLER" | species == "SIJU") %>%
-  
-  # only keep a plot if both species are above the threshold
-  group_by(quadID, treatment, trtrep, subplot, repnum2) %>%
-  mutate(nospp = length(unique((species)))) %>%
-  filter(nospp == 2) %>%
-  
-  # restrict to ts with at least 8 recrods
-  filter(ncount > 9) %>%
-  
-  # identify the starting year for each record
-  group_by(species, quadID, treatment, trtrep, subplot, repnum2) %>%
-  summarize(year = min(year))
-
-plstcheck2 <- plstcheck %>%
-  group_by(species, year) %>%
-  summarize(repplots = n()) %>%
-  tbl_df() %>%
-  spread(species, repplots)
-
-plstyears <- plstcheck2 %>%
-  filter(repplots > 9 & repplots < 40)
-
-myyears <- plstyears$year
+# plstcheck <- tog %>%
+#   # only keep a record if the cover is above a threshold value in the initial year
+#   mutate(keepdat = ifelse(rowdif == 0 & cover > threshold, 1, 0)) %>%
+#   filter(keepdat == 1) %>%
+#   
+#   # subset the focal species
+#   filter(species == "PLER" | species == "SIJU") %>%
+#   
+#   # only keep a plot if both species are above the threshold
+#   group_by(quadID, treatment, trtrep, subplot, repnum2) %>%
+#   mutate(nospp = length(unique((species)))) %>%
+#   filter(nospp == 2) %>%
+#   
+#   # restrict to ts with at least 8 recrods
+#   filter(ncount > 9) %>%
+#   
+#   # identify the starting year for each record
+#   group_by(species, quadID, treatment, trtrep, subplot, repnum2) %>%
+#   summarize(year = min(year))
+# 
+# plstcheck2 <- plstcheck %>%
+#   group_by(species, year) %>%
+#   summarize(repplots = n()) %>%
+#   tbl_df() %>%
+#   spread(species, repplots)
+# 
+# plstyears <- plstcheck2 %>%
+#   filter(repplots > 9 & repplots < 40)
+# 
+# myyears <- plstyears$year
 
 ## in replicate years with at least 10 data points
 
 plst <- tog %>%
   # only keep a record if the cover is above a threshold value in the initial year
-  mutate(keepdat = ifelse(rowdif == 0 & cover > threshold, 1, 0)) %>%
+  mutate(keepdat = ifelse(rowdif == 0 & cover > threshold & cover < upperthreshold, 1, 0)) %>%
   group_by(repnum2, species, quadID) %>%
   mutate(maxkeep = max(keepdat)) %>%
   filter(maxkeep > 0) %>%
@@ -62,7 +64,7 @@ plst <- tog %>%
 
 
 
-ggplot(subset(plst, rowdif < 11), aes(x=rowdif, y=cover, color = species, group = interaction(species,quadID))) + 
+ggplot(subset(plst, rowdif < 10), aes(x=rowdif, y=cover, color = species, group = interaction(species,quadID))) + 
   geom_line() + facet_wrap(~interaction(minyear,quadID))
 
 
@@ -77,8 +79,8 @@ plst2 <- plst %>%
 
 a <- ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) + 
   geom_vline(xintercept = 1, color = "lightgrey", lwd = 10) + 
-  geom_hline(yintercept = 9.48, color = "darkgrey", lty = "dashed") +
-  geom_hline(yintercept = 27, color = "darkgrey", lty = "dashed") +
+ # geom_hline(yintercept = 9.88, color = "darkgrey", lty = "dashed") +
+#  geom_hline(yintercept = 21.6, color = "darkgrey", lty = "dashed") +
   geom_line() +
   geom_point() + 
   geom_errorbar(aes(ymin = cover - secover, ymax = cover + secover), width = .2) + 
@@ -96,7 +98,7 @@ quads <- unique(plst$quadID)
 for (i in 1:length(quads)){
   
   subber <- subset(plst, quadID == quads[i]) %>%
-    tbl_df()
+    tbl_df() 
   
   subber2 <- subber %>%
     select(year, species, cover) %>%

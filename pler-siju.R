@@ -1,4 +1,4 @@
-source("time-since-gopher.R")
+source("Data-cleaning/times-since-gopher.R")
 plstcheck <- tog %>%
   filter(species == "PLER" | species == "SIJU") %>%
   mutate(keepdat = ifelse(rowdif == 0 & cover > 3, 1, 0)) %>%
