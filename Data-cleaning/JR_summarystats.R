@@ -42,6 +42,8 @@ source("prism-cleaning.R")
 #   mutate(precip = ppt)
 
 
+
+
 JR_spp <- read_csv("~/Dropbox/California Data/JR_species names.csv") %>%
   mutate(species = SpeciesCode)
 
