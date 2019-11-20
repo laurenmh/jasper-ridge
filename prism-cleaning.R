@@ -52,3 +52,28 @@ annual <- jrg_prism %>%
 
 JR_rain <- left_join(growing_season, seasonal_clim) %>%
   mutate(precip = ppt)
+
+daily_season <- jrg_prism %>%
+  filter(month%in%c(9,10,11,12,1,2,3,4)) %>%
+  mutate(year = ifelse(month > 8, year + 1, year)) %>%
+  mutate(season = ifelse(month%in%c(9,10,11), "fall", "winter"),
+         season = ifelse(month%in%c(3,4), "spring", season)) %>%
+  arrange(Date) %>%
+  group_by(year) %>%
+  mutate(raintally = cumsum(ppt)) %>%
+  mutate(daymonth = yday(Date)) %>%
+  mutate(daymonth = ifelse(month < 8, daymonth + 365, daymonth),
+         daymonth = daymonth - 244)
+
+firstrain <- daily_season %>%
+  filter(raintally > 0) %>%
+  group_by(year) %>%
+  mutate(firstrain = min(Date)) %>%
+  mutate(tokeep = ifelse(raintally == ppt, 1, 0)) %>%
+  filter(tokeep == 1)
+
+ggplot(firstrain, aes(x=year, y=daymonth)) + geom_point() + geom_line()
+ggplot(firstrain, aes(x=daymonth, y = ppt)) + geom_point()
+
+ggplot(subset(daily_season), aes(x=daymonth, y=raintally, color = as.factor(year))) + geom_line()
+ggplot(subset(daily_season), aes(x=daymonth, y=raintally)) + geom_line() + facet_wrap(~year)
