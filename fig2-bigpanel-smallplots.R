@@ -88,6 +88,10 @@ JR_gopher_mean_time <- left_join(JR_gopher, JR_rain) %>%
 JR_mean_time <- left_join(JR_mean_time_0, JR_gopher_mean_time)
 
 
+# firstrain2 <- firstrain %>%
+#   select(year, daymonth)
+# JR_togmean2 <- left_join(JR_togmean, firstrain2)
+
 myspp <- c("CAMU", "HELU", "LACA", "BRMO", "LOMU", "EVSP", "PLER",  
            "LOSU", "SIJU", "STPU", "LAPL", "ORDE", "VUMI",
            "CHPO", "BR__", "TIER", "MIDO", "ASGA")
@@ -98,11 +102,10 @@ for(i in 1:length(myspp)) {
   dat <- subset(JR_togmean, species == myspp[i]) %>%
     filter(!is.na(cover), !is.na(precip), !is.na(prevprecip))
   
-  l <- lmer(cover ~  soilDepth+ precip + prevprecip  + meandisturb + fall_ppt + winter_ppt + 
-              (1|trtrep/uniqueID) + 
+  l <- lmer(cover ~  soilDepth+ precip + prevprecip  + meandisturb + fall_ppt + winter_ppt +  
+              (1|trtrep/quadID) + 
               (1|year), 
             data = dat, na.action = na.omit)
-  
   
   step_res <- step(l)
   final <- get_model(step_res)
