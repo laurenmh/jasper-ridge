@@ -63,6 +63,7 @@ plst <- tog %>%
   
 
 
+plst$uniqueID <- paste(plst$quadID, plst$minyear)
 
 ggplot(subset(plst, rowdif < 10), aes(x=rowdif, y=cover, color = species, group = interaction(species,quadID))) + 
   geom_line() + facet_wrap(~interaction(minyear,quadID))
@@ -70,7 +71,7 @@ ggplot(subset(plst, rowdif < 10), aes(x=rowdif, y=cover, color = species, group 
 
 
 plst2 <- plst %>%
-  group_by(rowdif, quadID, species, treatment, minyear) %>%
+  group_by(rowdif, quadID, species, treatment, minyear, uniqueID) %>%
   summarize(meancover = mean(cover)) %>%
   tbl_df() %>%
   group_by(rowdif, species) %>%
@@ -93,11 +94,11 @@ a <- ggplot(subset(plst2, rowdif < 9), aes(x=rowdif, y=cover, color = species)) 
 outnames<-c("quadID", "treatment", "classicVR", "longVR", "shortVR")
 siteout<-as.data.frame(matrix(nrow=0, ncol=5))
 names(siteout)<-outnames
-quads <- unique(plst$quadID)
+quads <- unique(plst$uniqueID)
 
 for (i in 1:length(quads)){
   
-  subber <- subset(plst, quadID == quads[i]) %>%
+  subber <- subset(plst, uniqueID == quads[i]) %>%
     tbl_df() 
   
   subber2 <- subber %>%
@@ -162,7 +163,7 @@ c <- plot_grid(a + theme(legend.position = "none") + annotate("text", x=0, y =32
                  theme(panel.border = element_rect(colour = "black", fill=NA, size=.75)),
                align = c("hv"))
 
-pdf("annual_perennial_empirical.pdf", width = 10, height = 5)
+pdf("annual_perennial_empirical2.pdf", width = 10, height = 5)
 plot_grid(c, legd, nrow = 2, rel_heights = c(9.5,.5))
 dev.off()
 
