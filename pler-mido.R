@@ -26,8 +26,12 @@ plmi <- tog %>%
   group_by(species, quadID, treatment, trtrep, subplot, repnum2) %>%
   mutate(minyear = min(year))
 
+check <- plmi %>%
+  tbl_df() %>%
+  select(quadID, minyear) %>%
+  unique()
 
-
+plmi$uniqueID <- paste(plmi$quadID, plmi$minyear)
 
 ggplot(subset(plmi, rowdif < 11), aes(x=rowdif, y=cover, color = species, group = interaction(species,quadID))) + 
   geom_line() + facet_wrap(~interaction(minyear,quadID))
@@ -35,7 +39,7 @@ ggplot(subset(plmi, rowdif < 11), aes(x=rowdif, y=cover, color = species, group 
 
 
 plmi2 <- plmi %>%
-  group_by(rowdif, quadID, species, treatment) %>%
+  group_by(rowdif, quadID, species, treatment, uniqueID) %>%
   summarize(meancover = mean(cover)) %>%
   tbl_df() %>%
   group_by(rowdif, species) %>%
@@ -74,11 +78,11 @@ ggplot(subset(plmi3, rowdif < 15), aes(x=rowdif, y=cover, color = species)) +
 outnames<-c("quadID", "treatment", "classicVR", "longVR", "shortVR")
 siteout<-as.data.frame(matrix(nrow=0, ncol=5))
 names(siteout)<-outnames
-quads <- unique(plmi$quadID)
+quads <- unique(plmi$uniqueID)
 
 for (i in 1:length(quads)){
   
-  subber <- subset(plmi, quadID == quads[i] &  rowdif < 15) %>%
+  subber <- subset(plmi, uniqueID == quads[i] &  rowdif < 15) %>%
     tbl_df()
   
   subber2 <- subber %>%
