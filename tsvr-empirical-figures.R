@@ -119,8 +119,8 @@ siteout2 <- siteout %>%
   group_by(metric) %>%
   summarize(meanval = mean(value), seval = sd(value)/sqrt(n()))
 siteout2$metric2 <- c("Classic", "Long 
-Time-Scale", "Short 
-Time-Scale")
+Timescale", "Short 
+Timescale")
 siteout2$facorder <- c(3,2,1)
 
 
@@ -253,8 +253,8 @@ siteout2 <- siteout %>%
   group_by(metric) %>%
   summarize(meanval = mean(value), seval = sd(value)/sqrt(n()))
 siteout2$metric2 <- c("Classic", "Long 
-Time-Scale", "Short 
-Time-Scale")
+Timescale", "Short 
+Timescale")
 siteout2$facorder <- c(3,2,1)
 
 
@@ -296,6 +296,6 @@ c2 <- plot_grid(a2 + theme(legend.position = "none") + annotate("text", x=0, y =
                  theme(panel.border = element_rect(colour = "black", fill=NA, size=.75)),
                align = c("hv"))
 
-pdf("jr-empirical.pdf", width = 10, height = 10)
+pdf("jr-empirical.pdf", width = 10, height = 8)
 plot_grid(c, c2, nrow = 2)
  dev.off()
