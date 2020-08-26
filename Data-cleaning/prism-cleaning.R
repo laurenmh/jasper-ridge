@@ -53,6 +53,10 @@ annual <- jrg_prism %>%
 JR_rain <- left_join(growing_season, seasonal_clim) %>%
   mutate(precip = ppt)
 
+write_csv(JR_rain, "JR_rain.csv")
+
+
+## play around with date of first rain, etc
 daily_season <- jrg_prism %>%
   filter(month%in%c(9,10,11,12,1,2,3,4)) %>%
   mutate(year = ifelse(month > 8, year + 1, year)) %>%
@@ -75,5 +79,6 @@ firstrain <- daily_season %>%
 ggplot(firstrain, aes(x=year, y=daymonth)) + geom_point() + geom_line()
 ggplot(firstrain, aes(x=daymonth, y = ppt)) + geom_point()
 
+# rain accumulation curves
 ggplot(subset(daily_season), aes(x=daymonth, y=raintally, color = as.factor(year))) + geom_line()
 ggplot(subset(daily_season), aes(x=daymonth, y=raintally)) + geom_line() + facet_wrap(~year)
